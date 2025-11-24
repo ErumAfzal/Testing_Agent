@@ -492,32 +492,51 @@ if not st.session_state.chat_active and st.session_state.messages and not st.ses
             "Q12": q12,
             "comment": comment,
         }
+ # --- Save to Supabase instead of append_chat_and_feedback() ---
 
-        append_chat_and_feedback(
-            st.session_state.meta,
-            st.session_state.messages,
-            feedback_data,
-        )
+student_id = st.session_state.meta.get("student_id", "unknown")
 
-        st.session_state.feedback_done = True
+# Save chat messages
+chat_res = save_chat_to_supabase(
+    student_id=student_id,
+    messages=st.session_state.messages
+)
 
-        # Move from batch1 -> batch2 -> finished
-        if st.session_state.batch_step == "batch1":
-            st.session_state.batch_step = "batch2"
-            msg = (
-                "Thank you! Batch 1 is completed. Please continue with Batch 2 (Role-Plays 6–10)."
-                if language == "English"
-                else "Danke! Block 1 ist abgeschlossen. Bitte machen Sie mit Block 2 (Rollenspiele 6–10) weiter."
-            )
-            st.success(msg)
-        else:
-            st.session_state.batch_step = "finished"
-            msg = (
-                "Thank you! You completed both batches."
-                if language == "English"
-                else "Vielen Dank! Sie haben beide Blöcke abgeschlossen."
-            )
-            st.success(msg)
+# Save feedback
+fb_res = save_feedback_to_supabase(
+    student_id=student_id,
+    feedback_data=feedback_data
+)
 
-        # Clear chat for next step
-        st.session_state.messages = []
+# Check success or errors
+if chat_res.status_code < 300 and fb_res.status_code < 300:
+    st.success("Chat and feedback saved successfully!")
+else:
+    st.error(
+        f"Saving to Supabase failed:\n"
+        f"Chat: {chat_res.text}\n"
+        f"Feedback: {fb_res.text}"
+    )
+
+st.session_state.feedback_done = True
+
+# Move from batch1 -> batch2 -> finished
+if st.session_state.batch_step == "batch1":
+    st.session_state.batch_step = "batch2"
+    msg = (
+        "Thank you! Batch 1 is completed. Please continue with Batch 2 (Role-Plays 6–10)."
+        if language == "English"
+        else "Danke! Block 1 ist abgeschlossen. Bitte machen Sie mit Block 2 (Rollenspiele 6–10) weiter."
+    )
+    st.success(msg)
+else:
+    st.session_state.batch_step = "finished"
+    msg = (
+        "Thank you! You completed both batches."
+        if language == "English"
+        else "Vielen Dank! Sie haben beide Blöcke abgeschlossen."
+    )
+    st.success(msg)
+
+# Clear chat for next step
+st.session_state.messages = []
