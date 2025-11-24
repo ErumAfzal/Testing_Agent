@@ -1,6 +1,7 @@
 
 streamlit
 openai
+supabase-py
 gspread
 google-auth
 google-auth-oauthlib
